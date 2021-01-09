@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="utf-8">
+    <title>Fantasy size measurer</title>
+    <link type="text/css" rel="stylesheet" href="fantasy_kigndom.css" />
+  </head>
+  <body>
+    <h1>Fantasy size measurer</h1>
+    <form action="#">
+      <fieldset>
+        <legend>Fantasy stats</legend>
+        <div><label for="size">Size (pixels):</label><input type="number" id="size" min="0" step="any" value="1"/></div>
+        <div><label for="population">Population:</label><input type="number" id="population" min="0" step="any" value="1"/></div>
+      </fieldset>
+      <fieldset>
+        <legend>Real-life reference</legend>
+        <div><label for="density">Reference population density:</label><input type="number" id="density" value="1" min="0" step="any" /><select name="unit" id="unit" value="kilometres">
+  <option value="kilometres">per square kilometres</option>
+  <option value="miles">per square miles</option>
+</select></div>
+      </fieldset>
+      <fieldset>
+        <legend>Outputs:</legend>
+        <div>Each pixel represents <output id="translation" name="translation" for="size, population, density" >&nbsp;</output>.</div>
+        <div><label for="newSize">Kingdom size: </label><output id="newSize" name="newSize" for="size, population, density" >&nbsp;</output></div>
+      </fieldset>
+    </form>
+    <noscript>Doesn't work without Javascript.</noscript>
+    <script src="fantasy_kigndom.js"></script>
+  </body>
+</html>
