@@ -1,33 +1,72 @@
 stages:
+  - prepare
   - build
   - package
 
-app:build:
-  cache:
-    key: node
-    paths:
-      - node_modules
-  stage: build
-  image: node:15.2.1-alpine3.11
+site:prepare:
+  image: alpine/git:v2.26.2
+  stage: prepare
   tags:
     - kubernetes
     - cluster
   script:
-    - yarn install
+    - echo "VERSION=$(git describe | sed s!release/!!g)" > variables.env
+  artifacts:
+    reports:
+      dotenv:
+        - variables.env
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development" || $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_TAG =~ /^release\//'
+      when: on_success
+
+
+site:build:
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-node
+    paths:
+      - node_modules
+      - .cache
+      - public
+  stage: build
+  image: node:15.2.1-buster
+  tags:
+    - kubernetes
+    - cluster
+  script:
+    - yarn install --lockfile-only --network-timeout 100000
     - yarn build
   artifacts:
+    name: site
     paths:
       - build
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development" || $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_TAG =~ /^release\//'
+      when: on_success
 
-app:package:
+site:package:
   stage: package
   image: quay.io/buildah/stable:v1.16.0
   needs:
-    - job: app:build
+    - job: site:build
+      artifacts: true
+    - job: site:prepare
       artifacts: true
   tags:
     - kubernetes
     - cluster
-  script:
+  before_script:
     - buildah login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - ./build-docker.sh $CI_REGISTRY_IMAGE
+    - buildah from halverneus/static-file-server:v1.7.2 > container
+  script:
+    - C=$(cat container)
+    - buildah copy "${C}" "${PWD}/build" /web
+    - buildah commit "${C}" "$CI_REGISTRY_IMAGE:$VERSION"
+    - buildah push "$CI_REGISTRY_IMAGE:$VERSION" "docker://$CI_REGISTRY_IMAGE:$VERSION"
+  after_script:
+    - C=$(cat container)
+    - buildah rm "${C}"
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development" || $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_TAG =~ /^release\//'
+      when: on_success
+
+#include: /infra/.gitlab-ci.yml
