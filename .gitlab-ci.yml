@@ -1,0 +1,33 @@
+stages:
+  - build
+  - package
+
+app:build:
+  cache:
+    key: node
+    paths:
+      - node_modules
+  stage: build
+  image: node:15.2.1-alpine3.11
+  tags:
+    - kubernetes
+    - cluster
+  script:
+    - yarn install
+    - yarn build
+  artifacts:
+    paths:
+      - build
+
+app:package:
+  stage: package
+  image: quay.io/buildah/stable:v1.16.0
+  needs:
+    - job: app:build
+      artifacts: true
+  tags:
+    - kubernetes
+    - cluster
+  script:
+    - buildah login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - ./build-docker.sh $CI_REGISTRY_IMAGE
