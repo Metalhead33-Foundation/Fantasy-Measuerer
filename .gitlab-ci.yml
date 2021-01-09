@@ -1,7 +1,10 @@
 stages:
   - prepare
+  - validate
   - build
   - package
+  - deploy
+  - destroy
 
 site:prepare:
   image: alpine/git:v2.26.2
