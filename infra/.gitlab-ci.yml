@@ -1,0 +1,206 @@
+.deploy_template: &deploy_tpl
+  image: registry.gitlab.com/gitlab-org/terraform-images/releases/0.13:v0.2.4
+  variables: &deploy_tpl_vars
+    TF_ROOT: ${CI_PROJECT_DIR}/infra
+    TF_ADDRESS: ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${CI_ENVIRONMENT_NAME}
+  cache:
+    key: production
+    paths:
+      - ${TF_ROOT}/.terraform
+  before_script:
+    - cd ${TF_ROOT}
+    - ./terraform-gitlab.sh
+
+deploy:init:
+  <<: *deploy_tpl
+  stage: prepare
+  script:
+    - gitlab-terraform init
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development" || $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_TAG =~ /^release\//'
+      when: on_success
+
+deploy:validate:
+  <<: *deploy_tpl
+  needs:
+    - job: deploy:init
+      artifacts: false
+  stage: validate
+  script:
+    - gitlab-terraform validate
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development" || $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_TAG =~ /^release\//'
+      when: on_success
+
+deploy:plan:dev:
+  <<: *deploy_tpl
+  needs:
+    - job: deploy:validate
+      artifacts: false
+    - job: site:prepare
+      artifacts: true
+  stage: build
+  environment:
+    name: development
+    action: prepare
+    url: https://$domain
+    auto_stop_in: 7 days
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "development"'
+      when: on_success
+  script:
+    - echo "app_version = \"$VERSION\"" > site.version.auto.tfvars
+    - gitlab-terraform plan
+    - gitlab-terraform plan-json
+  artifacts:
+    name: plan-dev
+    paths:
+      - ${TF_ROOT}/plan.cache
+      - ${TF_ROOT}/site.version.auto.tfvars
+
+deploy:apply:dev:
+  <<: *deploy_tpl
+  needs:
+    - job: deploy:plan:dev
+      artifacts: true
+    - job: site:package
+      artifacts: false
+  stage: deploy
+  environment:
+    name: development
+    on_stop: deploy:stop:dev
+    url: $domain
+    auto_stop_in: 7 days
+  script:
+    - gitlab-terraform apply
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "development"'
+      when: on_success
+
+deploy:stop:dev:
+  <<: *deploy_tpl
+  needs:
+    - job: deploy:apply:dev
+      artifacts: false
+  stage: destroy
+  script:
+    - gitlab-terraform init
+    - gitlab-terraform destroy -auto-approve
+  environment:
+    name: development
+    action: stop
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "development"'
+      when: manual
+
+deploy:plan:branch:
+  <<: *deploy_tpl
+  variables:
+    <<: *deploy_tpl_vars
+    domain: ${CI_COMMIT_REF_SLUG}.wod.sonck.nl
+  needs:
+    - job: deploy:validate
+      artifacts: false
+    - job: site:prepare
+      artifacts: true
+  stage: build
+  environment:
+    name: $CI_COMMIT_REF_SLUG
+    action: prepare
+    url: https://$CI_COMMIT_REF_SLUG.wod.sonck.nl
+    auto_stop_in: 2 days
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development"'
+      when: on_success
+  script:
+    - echo "app_version = \"$VERSION\"" > site.version.auto.tfvars
+    - gitlab-terraform plan
+    - gitlab-terraform plan-json
+  artifacts:
+    name: plan-dev
+    paths:
+      - ${TF_ROOT}/plan.cache
+      - ${TF_ROOT}/site.version.auto.tfvars
+
+deploy:apply:branch:
+  <<: *deploy_tpl
+  variables:
+    <<: *deploy_tpl_vars
+    domain: ${CI_COMMIT_REF_SLUG}.wod.sonck.nl
+  needs:
+    - job: deploy:plan:branch
+      artifacts: true
+    - job: site:package
+      artifacts: false
+  stage: deploy
+  environment:
+    name: $CI_COMMIT_REF_SLUG
+    url: https://$CI_COMMIT_REF_SLUG.wod.sonck.nl
+    on_stop: deploy:stop:branch
+    auto_stop_in: 2 days
+  script:
+    - gitlab-terraform apply
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development"'
+      when: on_success
+
+deploy:stop:branch:
+  <<: *deploy_tpl
+  variables:
+    <<: *deploy_tpl_vars
+    domain: ${CI_COMMIT_REF_SLUG}.wod.sonck.nl
+  needs:
+    - job: deploy:apply:branch
+      artifacts: false
+  stage: destroy
+  script:
+    - gitlab-terraform init
+    - gitlab-terraform destroy -auto-approve
+  environment:
+    name: $CI_COMMIT_REF_SLUG
+    action: stop
+  rules:
+    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development"'
+      when: manual
+
+deploy:plan:pro:
+  <<: *deploy_tpl
+  needs:
+    - job: deploy:validate
+      artifacts: false
+    - job: site:prepare
+      artifacts: true
+  stage: build
+  environment:
+    name: production
+    action: prepare
+    url: https://$domain
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^release\//'
+      when: on_success
+  script:
+    - echo "app_version = \"$VERSION\"" > site.version.auto.tfvars
+    - gitlab-terraform plan
+    - gitlab-terraform plan-json
+  artifacts:
+    name: plan-dev
+    paths:
+      - ${TF_ROOT}/plan.cache
+      - ${TF_ROOT}/site.version.auto.tfvars
+
+deploy:apply:pro:
+  <<: *deploy_tpl
+  needs:
+    - job: deploy:plan:pro
+      artifacts: true
+    - job: site:package
+      artifacts: false
+  stage: deploy
+  environment:
+    name: production
+    url: https://$domain
+  script:
+    - gitlab-terraform apply
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^release\//'
+      when: on_success

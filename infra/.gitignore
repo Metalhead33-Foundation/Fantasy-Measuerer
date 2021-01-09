@@ -1,0 +1,6 @@
+.terraform
+backend.tf
+details.auto.tfvars
+site.version.auto.tfvars
+plan
+plan.json

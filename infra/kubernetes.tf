@@ -1,18 +1,22 @@
 locals {
   labels = {
     environment = var.environment
-    app = "fantasy-measurer"
-    "redmonitor.cofano.io/application" = "Fantasy-Measurer"
-    "redmonitor.cofano.io/customer" = "metalhead33"
+    application = "ways-of-darkness"
+    customer = "metalhead33"
+    "redmonitor.cofano.io/category" = "sites"
   }
   annotations = {
     "app.gitlab.com/app" = var.gitlab_app
     "app.gitlab.com/env" = var.environment
   }
-  name = "${var.environment}-fantasy-measurer"
+  name = "${var.environment}-wod-ng"
 }
 
-resource "kubernetes_deployment" "fantasy-measurer" {
+provider "kubernetes" {
+
+}
+
+resource "kubernetes_deployment" "wod" {
   metadata {
     name = local.name
     namespace = var.namespace
@@ -20,7 +24,9 @@ resource "kubernetes_deployment" "fantasy-measurer" {
     annotations = local.annotations
   }
   spec {
-    revision_history_limit = 1
+    selector {
+      match_labels = local.labels
+    }
     template {
       metadata {
         labels = local.labels
@@ -28,12 +34,26 @@ resource "kubernetes_deployment" "fantasy-measurer" {
       }
       spec {
         container {
-          image_pull_policy = "Always"
           name = "main"
-          image = "registry.git.sonck.nl/metalhead33/ways-of-darkness/fantasy-measurer:latest"
+          image = "${var.app_image}:${var.app_version}"
+
           port {
             container_port = 8080
             name = "http"
+            protocol = "TCP"
+          }
+
+          liveness_probe {
+            http_get {
+              path = "/"
+              port = "http"
+            }
+          }
+          readiness_probe {
+            http_get {
+              path = "/"
+              port = "http"
+            }
           }
         }
       }
@@ -41,39 +61,50 @@ resource "kubernetes_deployment" "fantasy-measurer" {
   }
 }
 
-resource "kubernetes_service" "fantasy-measurer" {
+resource "kubernetes_service" "wod" {
   metadata {
     name = local.name
-    namespace = var.namespace
     labels = local.labels
+    namespace = var.namespace
   }
   spec {
-    selector = local.labels
+    type = "ClusterIP"
     port {
       port = 80
       target_port = "http"
+      protocol = "TCP"
+      name = "http"
     }
+    selector = local.labels
   }
 }
 
-resource "kubernetes_ingress" "fantasy-measurer" {
+resource "kubernetes_ingress" "wod" {
   metadata {
     name = local.name
     namespace = var.namespace
     labels = local.labels
+    annotations = {
+      "kubernetes.io/ingress.class" = "nginx"
+      "cert-manager.io/cluster-issuer" = "letsencrypt-sonck-prod"
+    }
   }
   spec {
     rule {
-      host = "ways-of-darkness.sonck.nl"
       http {
         path {
-          path = "fantasy-measurer"
+          path = "/"
           backend {
-            service_name = kubernetes_service.fantasy-measurer.metadata[0].name
-            service_port = kubernetes_service.fantasy-measurer.spec[0].port[0].port
+            service_name = kubernetes_service.wod.metadata[0].name
+            service_port = "http"
           }
         }
       }
+      host = var.domain
+    }
+    tls {
+      hosts = [var.domain]
+      secret_name = "${replace(var.domain, ".", "-")}-tls"
     }
   }
 }
