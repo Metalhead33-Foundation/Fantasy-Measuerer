@@ -17,7 +17,7 @@ EOB
 cat << EOC > details.auto.tfvars
 app_image = "${CI_REGISTRY_IMAGE:-ways-of-darkness-ng}"
 
-domain = "${domain:-ways-of-darkness-fantasy-measurer.sonck.nl}"
+domain = "${domain:-ways-of-darkness-fantasy-measurer-${ENV}.sonck.nl}"
 
 environment = "${ENV}"
 gitlab_app = "${APP}"

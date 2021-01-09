@@ -25,8 +25,8 @@ site:build:
     key: ${CI_COMMIT_REF_SLUG}-node
     paths:
       - node_modules
-      - .cache
-      - public
+      - .eslintcache
+      - build
   stage: build
   image: node:15.2.1-buster
   tags:
