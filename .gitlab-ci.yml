@@ -69,4 +69,4 @@ site:package:
     - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development" || $CI_COMMIT_BRANCH == "development" || $CI_COMMIT_TAG =~ /^release\//'
       when: on_success
 
-#include: /infra/.gitlab-ci.yml
+include: /infra/.gitlab-ci.yml
