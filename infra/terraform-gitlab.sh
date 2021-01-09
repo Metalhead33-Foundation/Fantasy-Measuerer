@@ -15,7 +15,7 @@ terraform {
 EOB
 
 cat << EOC > details.auto.tfvars
-app_image = "${CI_REGISTRY_IMAGE:-ways-of-darkness-ng}"
+app_image = "${CI_REGISTRY_IMAGE:-fantasy-measurer}"
 
 domain = "${domain:-ways-of-darkness-fantasy-measurer-${ENV}.sonck.nl}"
 

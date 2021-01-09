@@ -1,7 +1,7 @@
 locals {
   labels = {
     environment = var.environment
-    application = "ways-of-darkness"
+    application = "fantasy-measurer"
     customer = "metalhead33"
     "redmonitor.cofano.io/category" = "sites"
   }
@@ -9,7 +9,7 @@ locals {
     "app.gitlab.com/app" = var.gitlab_app
     "app.gitlab.com/env" = var.environment
   }
-  name = "${var.environment}-wod-ng"
+  name = "${var.environment}-fantasy-measurer"
 }
 
 provider "kubernetes" {
