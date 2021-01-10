@@ -1,82 +1,144 @@
-import './App.css';
-import {useState} from 'react';
+// import './App.css';
+import {useCallback, useEffect, useState} from 'react';
+import clsx from 'clsx';
+import {
+    AppBar,
+    Container,
+    CssBaseline, Divider,
+    Drawer,
+    IconButton,
+    makeStyles, Toolbar,
+    Typography,
+    useMediaQuery,
+    useTheme
+} from "@material-ui/core";
+import {
+    Menu as MenuIcon,
+} from "@material-ui/icons"
+import {BrowserRouter} from 'react-router-dom';
+import Routes from "./Routes";
+import SideBar from "./components/SideBar";
 
-type Unit = {
-    name: string,
-}
 
-const units: Unit[] = [
-    {name: 'kilometres'},
-    {name: 'miles'},
-]
+const drawerWidth = 320;
 
-export type CalculateProps = {
-    population: number,
-    size: number,
-    density: number,
-}
+const useStyles = makeStyles((theme) => ({
+    root: {
+        display: 'flex',
+    },
+    appBar: {
+        zIndex: theme.zIndex.drawer + 1,
+    },
+    grow: {
+        flexGrow: 1,
+    },
+    menuButton: {
+        marginRight: theme.spacing(2),
+    },
+    hide: {
+        display: 'none',
+    },
+    drawer: {
+        width: drawerWidth,
+        flexShrink: 0,
+        display: 'flex',
+        flexFlow: 'column nowrap',
+        maxHeight: '100vh',
+    },
+    drawerPaper: {
+        width: drawerWidth,
+    },
+    toolbar: theme.mixins.toolbar,
+    content: {
+        flexGrow: 1,
+        padding: theme.spacing(3),
+        transition: theme.transitions.create('margin', {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen,
+        }),
+        marginLeft: -drawerWidth,
+        backgroundColor: theme.palette.background.default,
+        '& h4 > a': {
+            textDecoration: 'none',
+            color: theme.palette.primary.main,
+        },
+    },
+    contentShift: {
+        transition: theme.transitions.create('margin', {
+            easing: theme.transitions.easing.easeOut,
+            duration: theme.transitions.duration.enteringScreen,
+        }),
+        marginLeft: 0,
+    },
+    contentRoot: {
+        marginTop: -theme.spacing(3),
+        '& > div': {
+            marginTop: theme.spacing(3),
+        },
+    },
+}));
 
-export const calculate = ({population, size, density}: CalculateProps) => {
-    return {
-        ratio: population / size / density,
-        size: population / density,
-    }
-}
 
 function App() {
-    const [size, setSize] = useState(1);
-    const [population, setPopulation] = useState(1);
-    const [density, setDensity] = useState(1);
-    const [unit, setUnit] = useState("kilometres")
-    const {ratio, size: newSize} = calculate({size, population, density})
+    const classes = useStyles();
+    const theme = useTheme();
+    const wideScreen = useMediaQuery(theme.breakpoints.up('lg'));
+
+    const [open, setOpen] = useState(wideScreen);
+    useEffect(() => {
+        setOpen(wideScreen)
+    }, [wideScreen])
+
+    const handleDrawerToggle = useCallback(() => {
+        setOpen(open => !open);
+    }, [setOpen]);
 
     return (
-        <div className="App">
-            <h1>Fantasy size measurer</h1>
-            <form action="#">
-                <fieldset>
-                    <legend>Fantasy stats</legend>
-                    <div>
-                        <label htmlFor="size">Size (pixels):</label>
-                        <input type="number" id="size" min="1" step="any" value={size}
-                               onChange={(ev) => setSize(parseInt(ev.target.value))}/>
-                    </div>
-                    <div>
-                        <label htmlFor="population">Population:</label>
-                        <input type="number" id="population" min="1" step="any" value={population}
-                        onChange={(ev) => setPopulation(parseInt(ev.target.value))}/>
-                    </div>
-                </fieldset>
-                <fieldset>
-                    <legend>Real-life reference</legend>
-                    <div>
-                        <label htmlFor="density">Reference population density:</label>
-                        <input type="number" id="density" value={density} onChange={(ev) => setDensity(parseInt(ev.target.value))} min="1" step="any"/>
-                        <select name="unit" id="unit" value={unit} onChange={(ev) => setUnit(ev.target.value)}>
-                            {units.map(({name}, idx) => (
-                                <option key={idx} value={name}>per square {name}</option>
-                            ))}
-                        </select>
-                    </div>
-                </fieldset>
-                <fieldset>
-                    <legend>Outputs:</legend>
-                    <div>
-                        Each pixel represents <output id="translation" name="translation"
-                                                      htmlFor="size, population, density">
-                        {`${ratio.toFixed(4)} square ${unit}`}
-                    </output>.
-                    </div>
-                    <div>
-                        <label htmlFor="newSize">Kingdom size: </label>
-                        <output id="newSize" name="newSize" htmlFor="size, population, density">
-                            {`${newSize.toFixed(0)} square ${unit}`}
-                        </output>
-                    </div>
-                </fieldset>
-
-            </form>
-        </div>
+        <BrowserRouter>
+            <div className={classes.root}>
+                <CssBaseline />
+                <AppBar position="fixed" className={classes.appBar}>
+                    <Toolbar>
+                        <IconButton
+                            color="inherit"
+                            aria-label="open drawer"
+                            onClick={handleDrawerToggle}
+                            edge="start"
+                        >
+                            <MenuIcon />
+                        </IconButton>
+                        <Typography variant="h6" noWrap>
+                            Ways of Darkness Utils
+                        </Typography>
+                        <div className={classes.grow} />
+                    </Toolbar>
+                </AppBar>
+                <Drawer
+                    className={classes.drawer}
+                    variant="persistent"
+                    classes={{
+                        paper: classes.drawerPaper,
+                    }}
+                    open={open}
+                    anchor="left"
+                >
+                    <div className={classes.toolbar} />
+                    <Divider/>
+                    <SideBar />
+                    <Divider />
+                </Drawer>
+                <main
+                    className={clsx(classes.content, {
+                        [classes.contentShift]: open,
+                    })}
+                >
+                    <div className={classes.toolbar} />
+                    <Container maxWidth="md" className={classes.contentRoot}>
+                        <Routes />
+                    </Container>
+                </main>
+            </div>
+        </BrowserRouter>
     );
 }
 
