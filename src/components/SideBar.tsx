@@ -1,13 +1,12 @@
-import React from 'react';
+import {FC, Fragment} from 'react';
 
-import {Divider} from '@material-ui/core'
 import FantasyMeasurerNav from "../modules/fantasy-measurer/Nav";
 
-const SideBar: React.FC = () => {
+const SideBar: FC = () => {
     return (
-        <>
+        <Fragment>
             <FantasyMeasurerNav />
-        </>
+        </Fragment>
     )
 }
 
