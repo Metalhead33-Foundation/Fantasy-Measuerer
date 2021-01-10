@@ -1,4 +1,4 @@
-import {calculate} from './App'
+import {calculate} from './'
 
 function getRandomInt({min,max}: {min?: number, max: number}) {
     if(min === undefined) {

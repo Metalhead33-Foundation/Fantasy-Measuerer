@@ -59,7 +59,7 @@ site:package:
     - cluster
   before_script:
     - buildah login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - buildah from halverneus/static-file-server:v1.7.2 > container
+    - buildah from registry.git.sonck.nl/misc/static-file-server:latest > container
   script:
     - C=$(cat container)
     - buildah copy "${C}" "${PWD}/build" /web
